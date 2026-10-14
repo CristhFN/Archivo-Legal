@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Archivo Jurídico</title>
+<meta name="theme-color" content="#14213d">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--ink:#14213d;--mut:#5b6b7d;--bg:#f4f6f8;--card:#fff;--line:#d9dee4;--brass:#b08a3e;--on:#fff;--danger:#a4262c}
+@media(prefers-color-scheme:dark){:root{--ink:#e8edf3;--mut:#9aa8b8;--bg:#0f1722;--card:#18222f;--line:#2b3949;--brass:#d2ab5c;--on:#0f1722;--danger:#ff8a8f}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+h1,h2{font-family:Georgia,"Times New Roman",serif;margin:0}
+header{padding:20px 16px 8px;max-width:820px;margin:auto;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+h1{font-size:28px}.sub{color:var(--mut);font-size:14px}
+.bar{max-width:820px;margin:auto;padding:8px 16px;display:grid;gap:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,textarea,button{font:inherit;color:inherit;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:10px 12px}
+input,select,textarea{width:100%}.row>*{flex:1;min-width:130px}
+button{cursor:pointer;font-weight:600}button:disabled{opacity:.45}
+button.p{background:var(--ink);color:var(--on);border-color:var(--ink)}button.s{background:var(--brass);border-color:var(--brass);color:#14213d}button.d{color:var(--danger)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+main{max-width:820px;margin:auto;padding:0 16px 80px}
+h2{font-size:18px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--brass)}
+dialog h2{margin:0 0 10px}
+.doc{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.doc .t{flex:1;min-width:0}.doc b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc small{color:var(--mut)}.empty{text-align:center;color:var(--mut);padding:36px 12px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);width:min(560px,94vw);padding:16px;max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:grid;gap:4px;font-size:14px;color:var(--mut);margin-bottom:10px}
+.pv{width:100%;height:55vh;border:1px solid var(--line);border-radius:8px;background:var(--card);object-fit:contain}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--on);padding:10px 16px;border-radius:8px;display:none;z-index:200;max-width:92vw}
+#thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:8px 0 12px}
+.th{display:grid;gap:4px;text-align:center}.th img{width:100%;height:130px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.th button{padding:4px}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;place-items:center;padding:24px}
+#lock>div{width:min(340px,100%);display:grid;gap:10px;text-align:center}
+.sec{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}.note{font-size:13px;color:var(--mut);margin:0 0 8px}
+</style></head><body>
+<div id="lock"><div><h1>Archivo Jurídico</h1><p class="sub">Desbloquea para continuar</p>
+ <input id="lPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN o contraseña">
+ <button class="p" id="lOk">Desbloquear</button><button id="lBio">Usar huella / Face ID</button><div id="lErr" class="sub" style="color:var(--danger)"></div></div></div>
+
+<header><div><h1>Archivo Jurídico</h1><div class="sub" id="count"></div></div><button id="bSet" style="flex:none">Ajustes</button></header>
+<div class="bar">
+ <div class="row"><button class="s" id="bScan">Escanear a PDF</button><button class="p" id="bAdd">Subir archivos</button></div>
+ <input id="q" type="search" placeholder="Buscar por nombre, n.º de proceso o nota">
+ <div class="row"><select id="fCat"></select>
+  <select id="grp"><option value="date">Agrupar por fecha del documento</option><option value="added">Agrupar por fecha de creación</option><option value="cat">Agrupar por tipo</option><option value="proc">Agrupar por n.º de proceso</option></select></div>
+ <div class="row"><button id="bDrive">Enviar todo a Google Drive</button><button id="bExp">Exportar respaldo</button><button id="bImp">Importar respaldo</button></div>
+</div>
+<main id="list"></main>
+<input id="fileIn" type="file" multiple hidden><input id="scanIn" type="file" accept="image/*" capture="environment" hidden><input id="impIn" type="file" accept=".json" hidden>
+
+<dialog id="dScan"><h2 id="sTitle"></h2><div class="sub">Toma las fotos en orden; cada una será una página del PDF.</div>
+ <div id="thumbs"></div>
+ <div class="row"><button class="s" id="sShot">Tomar foto</button><button class="p" id="sDone">Terminar</button><button id="sCancel">Cancelar</button></div></dialog>
+
+<dialog id="dAdd"><h2>Datos del documento</h2><form method="dialog" id="fAdd">
+ <label>Nombre<input id="aName" required></label>
+ <label>Tipo de documento<select id="aCat"></select></label>
+ <label>Número de proceso<input id="aProc" placeholder="Ej. 11001-31-03-000-2024-00123-00"></label>
+ <label>Fecha del documento<input id="aDate" type="date" required></label>
+ <label>Notas<textarea id="aNotes" rows="2"></textarea></label>
+ <div class="sub" id="aCreated" style="margin-bottom:10px"></div>
+ <div class="row"><button type="button" id="aCancel">Cancelar</button><button class="p">Guardar</button></div></form></dialog>
+
+<dialog id="dView"><h2 id="vTitle"></h2><div class="sub" id="vMeta" style="margin-bottom:10px"></div><div id="vBody"></div>
+ <div class="row" style="margin-top:12px"><button id="vOpen">Abrir</button><button id="vDl">Descargar</button><button id="vMore" class="s">Agregar páginas</button><button id="vDrive">Enviar a Drive</button><button id="vEdit">Editar datos</button><button class="d" id="vDel">Eliminar</button><button id="vClose">Cerrar</button></div></dialog>
+
+<dialog id="dSet"><h2>Ajustes</h2>
+ <div class="note">El bloqueo es opcional. Protege la entrada a la app, pero no cifra los archivos.</div>
+ <label>PIN o contraseña<input id="sPin" type="password" autocomplete="new-password" placeholder="Mínimo 4 caracteres"></label>
+ <div class="row"><button class="p" id="pSave">Guardar PIN</button><button id="pDel">Quitar PIN</button></div>
+ <div class="sec"><div class="note" id="bioSt"></div><div class="row"><button id="bioOn">Activar huella / Face ID</button><button id="bioOff">Desactivar</button></div></div>
+ <div class="sec"><label>Client ID de Google (para Drive)<input id="gcid" placeholder="xxxx.apps.googleusercontent.com"></label><button id="gSave">Guardar Client ID</button></div>
+ <div class="row" style="margin-top:12px"><button id="setClose">Cerrar</button></div></dialog>
+<div id="toast"></div>
+
+<script>
+const CATS={"Contrato":"#2a6f97","Poder":"#7b5ea7","Demanda / Escrito":"#c1553b","Sentencia / Fallo":"#b08a3e","Escritura":"#3a7d5c","Identificación":"#5b6b7d","Certificado":"#a1467a","Otro":"#8a8f98"};
+const $=s=>document.querySelector(s),LS=localStorage,E=new TextEncoder();
+let db,docs=[],queue=[],cur=null,url=null,editing=null,sp=[],stgt=null,lastProc="";
+const today=()=>new Date().toISOString().slice(0,10);
+const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(t.h);t.h=setTimeout(()=>t.style.display="none",3000)};
+const store=(m,f)=>new Promise((ok,ko)=>{const r=f(db.transaction("docs",m).objectStore("docs"));r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+const opt=(sel,all)=>{sel.innerHTML=(all?'<option value="">Todos los tipos</option>':"")+Object.keys(CATS).map(c=>`<option>${c}</option>`).join("")};
+opt($("#aCat"));opt($("#fCat"),1);
+/* ---------- Bloqueo opcional ---------- */
+const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const locked=()=>LS.pinHash||LS.bioId;
+async function hash(p,salt){const k=await crypto.subtle.importKey("raw",E.encode(p),"PBKDF2",false,["deriveBits"]);return b64(await crypto.subtle.deriveBits({name:"PBKDF2",salt:E.encode(salt),iterations:150000,hash:"SHA-256"},k,256))}
+function showLock(){if(!locked())return;$("#lock").style.display="grid";$("#lPin").style.display=LS.pinHash?"":"none";$("#lOk").style.display=LS.pinHash?"":"none";$("#lBio").style.display=LS.bioId?"":"none";$("#lPin").value="";$("#lErr").textContent=""}
+const unlock=()=>{$("#lock").style.display="none"};
+$("#lOk").onclick=async()=>{if(await hash($("#lPin").value,LS.pinSalt)==LS.pinHash)unlock();else $("#lErr").textContent="PIN incorrecto"};
+$("#lPin").onkeydown=e=>e.key=="Enter"&&$("#lOk").click();
+$("#lBio").onclick=async()=>{try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:unb64(LS.bioId)}],userVerification:"required",timeout:60000}});unlock()}catch{$("#lErr").textContent="No se pudo verificar. Inténtalo de nuevo."}};
+showLock();let away=0;
+document.addEventListener("visibilitychange",()=>{if(document.hidden)away=Date.now();else if(away&&Date.now()-away>60000)showLock()});
+function setUI(){$("#bioSt").textContent=LS.bioId?"Huella / Face ID: activado":"Huella / Face ID: desactivado";$("#gcid").value=LS.gcid||"";$("#pDel").disabled=!LS.pinHash}
+$("#bSet").onclick=()=>{setUI();$("#dSet").showModal()};$("#setClose").onclick=()=>$("#dSet").close();
+$("#pSave").onclick=async()=>{const p=$("#sPin").value;if(p.length<4)return toast("Usa al menos 4 caracteres");LS.pinSalt=b64(crypto.getRandomValues(new Uint8Array(16)));LS.pinHash=await hash(p,LS.pinSalt);$("#sPin").value="";setUI();toast("PIN guardado. Si lo olvidas, no hay forma de recuperarlo.")};
+$("#pDel").onclick=()=>{delete LS.pinHash;delete LS.pinSalt;setUI();toast("PIN eliminado")};
+$("#bioOn").onclick=async()=>{try{const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"Archivo Jurídico"},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:"usuario",displayName:"Usuario"},pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required"},timeout:60000}});LS.bioId=b64(c.rawId);setUI();toast("Huella / Face ID activado")}catch{toast("Tu dispositivo o navegador no permitió activarlo")}};
+$("#bioOff").onclick=()=>{delete LS.bioId;setUI();toast("Desactivado")};
+$("#gSave").onclick=()=>{LS.gcid=$("#gcid").value.trim();toast("Client ID guardado")};
+/* ---------- Base de datos ---------- */
+const req=indexedDB.open("archivo-juridico",1);
+req.onupgradeneeded=e=>e.target.result.createObjectStore("docs",{keyPath:"id"});
+req.onsuccess=async()=>{db=req.result;await load()};
+req.onerror=()=>toast("No se pudo abrir el almacenamiento local");
+async function load(){docs=await store("readonly",s=>s.getAll());render()}
+const fmt=n=>n>1e6?(n/1e6).toFixed(1)+" MB":Math.max(1,Math.round(n/1e3))+" KB";
+const mes=d=>new Date(d+"T00:00").toLocaleDateString("es",{month:"long",year:"numeric"});
+const iso=t=>new Date(t).toISOString().slice(0,10);
+function render(){
+ const q=$("#q").value.toLowerCase(),fc=$("#fCat").value,g=$("#grp").value;
+ const L=docs.filter(d=>(!fc||d.cat==fc)&&(d.name+" "+(d.proceso||"")+" "+(d.notes||"")).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date));
+ $("#count").textContent=docs.length+" documentos guardados en este dispositivo";
+ if(!L.length){$("#list").innerHTML='<div class="empty">'+(docs.length?"Ningún documento coincide con el filtro.":"Aún no hay documentos. Escanea uno con la cámara o sube un archivo.")+"</div>";return}
+ const key=d=>g=="date"?mes(d.date):g=="added"?mes(iso(d.added)):g=="cat"?d.cat:(d.proceso||"Sin número de proceso");
+ const G={};L.forEach(d=>(G[key(d)]??=[]).push(d));
+ $("#list").innerHTML=Object.entries(G).map(([k,a])=>`<h2></h2>`+a.map(d=>`<div class="doc" data-id="${d.id}" style="--c:${CATS[d.cat]}" tabindex="0"><div class="t"><b></b><small></small></div></div>`).join("")).join("");
+ const hs=[...$("#list").querySelectorAll("h2")];Object.keys(G).forEach((k,i)=>hs[i].textContent=k);
+ $("#list").querySelectorAll(".doc").forEach(el=>{const d=docs.find(x=>x.id==el.dataset.id);el.querySelector("b").textContent=d.name;
+  el.querySelector("small").textContent=[d.cat,d.proceso?"Proc. "+d.proceso:"","Doc. "+d.date,"Creado "+iso(d.added),fmt(d.size),d.driveId?"En Drive":""].filter(Boolean).join(" · ");
+  el.onclick=()=>view(d.id);el.onkeydown=e=>e.key=="Enter"&&view(d.id)});
+}
+["#q","#fCat","#grp"].forEach(s=>$(s).oninput=render);
+/* ---------- PDF (varias fotos) ---------- */
+async function shot(f){const bm=await createImageBitmap(f),k=Math.min(1,1800/Math.max(bm.width,bm.height)),c=document.createElement("canvas");
+ c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);
+ return{blob:await new Promise(r=>c.toBlob(r,"image/jpeg",.8)),w:c.width,h:c.height}}
+async function buildPdf(pages){const parts=[],offs=[];let len=0;const N=pages.length;
+ const push=x=>{const u=typeof x=="string"?E.encode(x):x;parts.push(u);len+=u.length};
+ const o=(n,s)=>{offs[n]=len;push(`${n} 0 obj\n${s}\nendobj\n`)};
+ push("%PDF-1.4\n");o(1,"<</Type/Catalog/Pages 2 0 R>>");
+ o(2,`<</Type/Pages/Count ${N}/Kids[${pages.map((_,i)=>`${3+i*3} 0 R`).join(" ")}]>>`);
+ for(let i=0;i<N;i++){const p=pages[i],b=3+i*3,by=new Uint8Array(await p.blob.arrayBuffer()),k=Math.min(595/p.w,842/p.h),dw=(p.w*k).toFixed(2),dh=(p.h*k).toFixed(2);
+  o(b,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</XObject<</Im0 ${b+2} 0 R>>>>/Contents ${b+1} 0 R>>`);
+  const c=`q ${dw} 0 0 ${dh} ${((595-dw)/2).toFixed(2)} ${((842-dh)/2).toFixed(2)} cm /Im0 Do Q`;
+  o(b+1,`<</Length ${c.length}>>\nstream\n${c}\nendstream`);
+  offs[b+2]=len;push(`${b+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${p.w}/Height ${p.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${by.length}>>\nstream\n`);push(by);push("\nendstream\nendobj\n")}
+ const T=2+3*N,x=len;let t=`xref\n0 ${T+1}\n0000000000 65535 f \n`;for(let n=1;n<=T;n++)t+=String(offs[n]).padStart(10,"0")+" 00000 n \n";
+ push(t+`trailer\n<</Size ${T+1}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`);return new Blob(parts,{type:"application/pdf"})}
+/* ---------- Escáner ---------- */
+function scanOpen(t){stgt=t;sp=[];drawScan();$("#sTitle").textContent=t?"Agregar páginas":"Escanear documento";$("#sDone").textContent=t?"Agregar al PDF":"Terminar y guardar";$("#dScan").showModal()}
+function drawScan(){const T=$("#thumbs");T.innerHTML=sp.map((p,i)=>`<div class="th"><img src="${p.url}" alt=""><small>Página ${i+1}</small><button class="d" data-i="${i}">Quitar</button></div>`).join("")||'<div class="empty" style="grid-column:1/-1">Toma la foto de la primera página.</div>';
+ T.querySelectorAll("button").forEach(b=>b.onclick=()=>{sp.splice(+b.dataset.i,1);drawScan()});$("#sDone").disabled=!sp.length;$("#sShot").textContent=sp.length?"Tomar otra foto":"Tomar foto"}
+$("#bScan").onclick=()=>scanOpen(null);$("#vMore").onclick=()=>{$("#dView").close();scanOpen(cur)};
+$("#sShot").onclick=()=>$("#scanIn").click();$("#sCancel").onclick=()=>$("#dScan").close();
+$("#scanIn").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;try{const p=await shot(f);p.url=URL.createObjectURL(p.blob);sp.push(p);drawScan()}catch{toast("No se pudo leer la foto")}};
+$("#sDone").onclick=async()=>{const pages=sp.map(({blob,w,h})=>({blob,w,h}));$("#dScan").close();
+ if(stgt){stgt.pages.push(...pages);stgt.blob=await buildPdf(stgt.pages);stgt.size=stgt.blob.size;stgt.driveId=null;await store("readwrite",s=>s.put(stgt));await load();toast("Páginas agregadas")}
+ else{queue=[{pages}];next()}};
+/* ---------- Alta y edición ---------- */
+$("#bAdd").onclick=()=>$("#fileIn").click();
+$("#fileIn").onchange=e=>{queue=[...e.target.files];e.target.value="";next()};
+function next(){if(!queue.length)return;const f=queue[0];editing=null;
+ $("#aName").value=f.pages?"Escaneo "+new Date().toLocaleDateString("es"):f.name.replace(/\.[^.]+$/,"");
+ $("#aDate").value=today();$("#aProc").value=lastProc;$("#aNotes").value="";$("#aCat").value="Otro";$("#aCreated").textContent="Fecha de creación: hoy (automática)";$("#dAdd").showModal()}
+$("#aCancel").onclick=()=>{queue=[];editing=null;$("#dAdd").close()};
+$("#fAdd").onsubmit=async()=>{
+ const v={name:$("#aName").value.trim(),cat:$("#aCat").value,proceso:$("#aProc").value.trim(),date:$("#aDate").value,notes:$("#aNotes").value.trim()};lastProc=v.proceso;
+ if(editing){Object.assign(editing,v);editing.driveId=null;await store("readwrite",s=>s.put(editing));editing=null;toast("Cambios guardados")}
+ else{const f=queue.shift();let r;
+  if(f.pages){const blob=await buildPdf(f.pages);r={...v,name:v.name+".pdf",mime:"application/pdf",size:blob.size,blob,pages:f.pages}}
+  else r={...v,name:v.name+((f.name.match(/\.[^.]+$/)||[""])[0]),mime:f.type||"application/octet-stream",size:f.size,blob:f};
+  await store("readwrite",s=>s.put({id:crypto.randomUUID(),added:Date.now(),driveId:null,...r}));toast("Documento guardado")}
+ await load();setTimeout(next,50)};
+/* ---------- Ver ---------- */
+function view(id){cur=docs.find(d=>d.id==id);if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(cur.blob);
+ $("#vTitle").textContent=cur.name;$("#vMeta").textContent=[cur.cat,cur.proceso?"Proceso "+cur.proceso:"","Documento: "+cur.date,"Creado: "+iso(cur.added),cur.pages?cur.pages.length+" pág.":"",cur.notes].filter(Boolean).join(" · ");
+ $("#vMore").style.display=cur.pages?"":"none";
+ const b=$("#vBody");b.innerHTML="";
+ if(cur.mime.startsWith("image/")){const i=document.createElement("img");i.className="pv";i.src=url;b.append(i)}
+ else if(cur.mime=="application/pdf"){const i=document.createElement("iframe");i.className="pv";i.src=url;b.append(i)}
+ else b.innerHTML='<div class="empty">Vista previa no disponible. Usa Descargar.</div>';
+ $("#dView").showModal()}
+$("#vClose").onclick=()=>$("#dView").close();$("#vOpen").onclick=()=>window.open(url,"_blank");
+const dl=(href,name)=>{const a=document.createElement("a");a.href=href;a.download=name;a.click()};
+$("#vDl").onclick=()=>dl(url,cur.name);
+$("#vDel").onclick=async()=>{if(confirm("¿Eliminar este documento? No se puede deshacer.")){await store("readwrite",s=>s.delete(cur.id));$("#dView").close();await load();toast("Eliminado")}};
+$("#vEdit").onclick=()=>{editing=cur;$("#aName").value=cur.name;$("#aCat").value=cur.cat;$("#aProc").value=cur.proceso||"";$("#aDate").value=cur.date;$("#aNotes").value=cur.notes||"";$("#aCreated").textContent="Fecha de creación: "+iso(cur.added);$("#dView").close();$("#dAdd").showModal()};
+/* ---------- Google Drive ---------- */
+let tok=null,tokExp=0;
+const gis=()=>new Promise((ok,ko)=>{if(window.google?.accounts)return ok();const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=ok;s.onerror=()=>ko(new Error("Sin conexión a internet"));document.head.append(s)});
+function token(){if(tok&&Date.now()<tokExp)return Promise.resolve(tok);if(!LS.gcid)return Promise.reject(new Error("Falta el Client ID de Google (Ajustes)"));
+ return gis().then(()=>new Promise((ok,ko)=>google.accounts.oauth2.initTokenClient({client_id:LS.gcid,scope:"https://www.googleapis.com/auth/drive.file",callback:r=>{if(r.error)return ko(new Error("Google: "+r.error));tok=r.access_token;tokExp=Date.now()+(r.expires_in-60)*1000;ok(tok)}}).requestAccessToken()))}
+async function api(u,o={}){const r=await fetch(u,{...o,headers:{Authorization:"Bearer "+tok,...(o.headers||{})}});if(!r.ok)throw new Error("Drive respondió "+r.status);return r.json()}
+async function folder(name,parent){const q=`name='${name.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+(parent?` and '${parent}' in parents`:"");
+ const j=await api("https://www.googleapis.com/drive/v3/files?fields=files(id)&q="+encodeURIComponent(q));if(j.files[0])return j.files[0].id;
+ return(await api("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,mimeType:"application/vnd.google-apps.folder",parents:parent?[parent]:undefined})})).id}
+async function upload(d){const root=await folder("Archivo Jurídico"),sub=await folder(d.cat.replace(/\//g,"-"),root);
+ const meta={name:(d.proceso?d.proceso+" - ":"")+d.name,parents:[sub],description:`Fecha del documento: ${d.date}. ${d.notes||""}`},fd=new FormData();
+ fd.append("metadata",new Blob([JSON.stringify(meta)],{type:"application/json"}));fd.append("file",d.blob);
+ d.driveId=(await api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",body:fd})).id;await store("readwrite",s=>s.put(d))}
+async function toDrive(list){try{await token();let n=0;for(const d of list){toast(`Enviando ${++n} de ${list.length}…`);await upload(d)}await load();toast("Enviado a tu Google Drive")}catch(e){toast(e.message||"No se pudo enviar a Drive")}}
+$("#bDrive").onclick=()=>{const l=docs.filter(d=>!d.driveId);l.length?toDrive(l):toast("Todo ya está en Drive")};
+$("#vDrive").onclick=()=>{$("#dView").close();toDrive([cur])};
+/* ---------- Respaldo ---------- */
+const rd=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+$("#bExp").onclick=async()=>{if(!docs.length)return toast("No hay documentos para respaldar");toast("Preparando respaldo…");
+ const out=[];for(const d of docs){const c={...d,blob:await rd(d.blob)};if(d.pages)c.pages=await Promise.all(d.pages.map(async p=>({...p,blob:await rd(p.blob)})));out.push(c)}
+ const u=URL.createObjectURL(new Blob([JSON.stringify({v:2,docs:out})],{type:"application/json"}));dl(u,"respaldo-archivo-juridico-"+today()+".json")};
+$("#bImp").onclick=()=>$("#impIn").click();
+$("#impIn").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+ try{const j=JSON.parse(await f.text()),bl=async s=>(await fetch(s)).blob();for(const d of j.docs){d.blob=await bl(d.blob);if(d.pages)for(const p of d.pages)p.blob=await bl(p.blob);await store("readwrite",s=>s.put(d))}await load();toast("Respaldo importado")}catch{toast("Archivo de respaldo no válido")}};
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+navigator.storage?.persist?.();
+</script></body></html>
