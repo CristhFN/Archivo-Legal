@@ -4,7 +4,7 @@ App para guardar, escanear y ordenar documentos jurídicos. Funciona en celular 
 ## 1. Ponerla en internet (una sola vez)
 La cámara y la instalación necesitan una dirección segura (https).
 1. Crea una cuenta gratis en **Netlify** (netlify.com).
-2. Entra a *Add new site → Deploy manually* y arrastra la carpeta `archivo-juridico` completa.
+2. Entra a *Add new site → Deploy manually* y arrastra la carpeta `archivo-legal` completa.
 3. Netlify te da un enlace (ej. `https://mi-archivo.netlify.app`). Ese es el enlace de tu app.
 
 ## 2. Instalarla
